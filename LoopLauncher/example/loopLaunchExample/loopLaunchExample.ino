@@ -13,5 +13,5 @@ void setup() {
 }
 
 void loop() {
-  launcher.Update();
+  launcher.update();
 }

@@ -11,7 +11,7 @@ class LoopLauncher
 {
 public:
   LoopLauncher(int controlStopPin, int controlPreviousPin, int controlNextPin, int launchPins[], int launchButtonCount, LiquidCrystal *lcd);
-  void Update();
+  void update();
 
 private:
   int _controlStopPin;
@@ -31,28 +31,32 @@ private:
 
   int _currentOctave = 5;
   int _currentBank = 1;
+  int _currentTrigger = 0;
 
   const int DebounceInterval = 5;
   const int LaunchButtonStartingNote = 1;
   const int StopButtonNote = 127;
 
-  void UpdateButtons();
+  void updateButtons();
 
-  void HandleLaunchButtons();
-  void HandleLaunchButton(Bounce *b, int pin);
-  void HandleStopButton();
-  void HandlePreviousButton();
-  void HandleNextButton();
+  void updateDisplay();
 
-  void ShiftCurrentBank(bool forward);
-  void ShiftCurrentOctave(bool forward);
+  void handleLaunchButtons();
+  void handleLaunchButton(Bounce *b, int pin);
+  void handleStopButton();
+  void handlePreviousButton();
+  void handleNextButton();
 
-  int FindLaunchNoteByIndex(int index);
+  void shiftCurrentBank(bool forward);
+  void shiftCurrentOctave(bool forward);
 
-  void MidiOn(int note);
-  void MidiOff(int note);
+  int findLaunchNoteByIndex(int index);
+  char findTriggerLabelByIndex(int index);
 
-  void SetupButton(Bounce *b, int pin);
+  void midiOn(int note);
+  void midiOff(int note);
+
+  void setupButton(Bounce *b, int pin);
 };
 
 #endif

@@ -19,32 +19,34 @@ LoopLauncher::LoopLauncher(
   for(int i = 0; i < launchButtonCount; i++) {
     _launchPins[i] = launchPins[i];
     Bounce b = Bounce();
-    this->SetupButton(&b, launchPins[i]);
+    this->setupButton(&b, launchPins[i]);
     _launchButtons[i] = b;
   }
 
   this->_stopButton = Bounce();
-  this->SetupButton(&_stopButton, controlStopPin);
+  this->setupButton(&_stopButton, controlStopPin);
 
   this->_previousButton = Bounce();
-  this->SetupButton(&_previousButton, controlPreviousPin);
+  this->setupButton(&_previousButton, controlPreviousPin);
 
   this->_nextButton = Bounce();
-  this->SetupButton(&_nextButton, controlNextPin);
+  this->setupButton(&_nextButton, controlNextPin);
 };
 
-void LoopLauncher::Update() {
+void LoopLauncher::update() {
 
-  this->UpdateButtons();
+  this->updateButtons();
 
-  this->HandleLaunchButtons();
+  this->handleLaunchButtons();
 
-  this->HandleStopButton();
-  this->HandlePreviousButton();
-  this->HandleNextButton();
+  this->handleStopButton();
+  this->handlePreviousButton();
+  this->handleNextButton();
+
+  this->updateDisplay();
 }
 
-void LoopLauncher::UpdateButtons()
+void LoopLauncher::updateButtons()
 {
   for(int i = 0; i < _launchButtonCount; i++) {
     _launchButtons[i].update();
@@ -57,7 +59,7 @@ void LoopLauncher::UpdateButtons()
 
 
 // handles shuffling the currentBank forward or backward
-void LoopLauncher::ShiftCurrentBank(bool forward) {
+void LoopLauncher::shiftCurrentBank(bool forward) {
   const int maxBanks = 20;
 
   if(forward) {
@@ -74,7 +76,7 @@ void LoopLauncher::ShiftCurrentBank(bool forward) {
   }
 }
 
-void LoopLauncher::ShiftCurrentOctave(bool forward) {
+void LoopLauncher::shiftCurrentOctave(bool forward) {
    const int maxOctave = 10;
 
    if(forward) {
@@ -92,63 +94,87 @@ void LoopLauncher::ShiftCurrentOctave(bool forward) {
 }
 
 
-int LoopLauncher::FindLaunchNoteByIndex(int index) {
+int LoopLauncher::findLaunchNoteByIndex(int index) {
   return (_currentBank * _launchButtonCount) + index + LaunchButtonStartingNote;
 }
 
-void LoopLauncher::MidiOn(int note) {
+char LoopLauncher::findTriggerLabelByIndex(int index) {
+  switch(index) {
+    case 0:
+      return 'A';
+    case 1:
+      return 'B';
+    case 2:
+      return 'C';
+    case 3:
+      return 'D';
+    case 4:
+      return 'E';
+    case 5:
+      return 'F';
+    default:
+      return '\0';
+  }
+}
+
+void LoopLauncher::midiOn(int note) {
   usbMIDI.sendNoteOn(note, _midiVelocity, _midiChannel);
 }
 
-void LoopLauncher::MidiOff(int note) {
+void LoopLauncher::midiOff(int note) {
   usbMIDI.sendNoteOff(note, _midiVelocity, _midiChannel);
 }
 
-void LoopLauncher::HandleLaunchButtons(){
+void LoopLauncher::handleLaunchButtons(){
   for(int i = 0; i < _launchButtonCount; i++) {
-      this->HandleLaunchButton(&_launchButtons[i], i);
+      this->handleLaunchButton(&_launchButtons[i], i);
     }
 }
 
-void LoopLauncher::HandleLaunchButton(Bounce *b, int index){
+void LoopLauncher::handleLaunchButton(Bounce *b, int index){
   if(b->fell()) {
-    this->MidiOn(this->FindLaunchNoteByIndex(index));
+    this->midiOn(this->findLaunchNoteByIndex(index));
+    _currentTrigger = index;
   }
 
   if(b->rose()) {
-    this->MidiOff(this->FindLaunchNoteByIndex(index));
+    this->midiOff(this->findLaunchNoteByIndex(index));
   }
 }
 
-void LoopLauncher::HandleStopButton() {
+void LoopLauncher::handleStopButton() {
   if(_stopButton.fell()) {
-    this->MidiOn(StopButtonNote);
+    this->midiOn(StopButtonNote);
   }
 
   if(_stopButton.rose()) {
-    this->MidiOff(StopButtonNote);
+    this->midiOff(StopButtonNote);
   }
 }
 
-void LoopLauncher::HandlePreviousButton() {
+void LoopLauncher::handlePreviousButton() {
   if(_previousButton.fell()) {
-    this->ShiftCurrentBank(false);
+    this->shiftCurrentBank(false);
   }
 
   if(_previousButton.rose()) {
   }
 }
 
-void LoopLauncher::HandleNextButton() {
+void LoopLauncher::handleNextButton() {
   if(_nextButton.fell()) {
-   this->ShiftCurrentBank(true);
+   this->shiftCurrentBank(true);
   }
 
   if(_nextButton.rose()) {
   }
 }
 
-void LoopLauncher::SetupButton(Bounce *b, int pin) {
+void LoopLauncher::setupButton(Bounce *b, int pin) {
   b->attach(pin);
   b->interval(DebounceInterval);
+}
+
+void LoopLauncher::updateDisplay() {
+  _lcd->print(_currentBank + this->findTriggerLabelByIndex(_currentTrigger));
 }
