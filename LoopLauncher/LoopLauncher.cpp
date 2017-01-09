@@ -1,101 +1,107 @@
 #include "Arduino.h"
 #include "LoopLauncher.h"
 
+LoopLauncher::LoopLauncher(){};
 
-LoopLauncher::LoopLauncher(
+
+void LoopLauncher::begin(
   int controlStopPin,
   int controlPreviousPin,
   int controlNextPin,
   int launchPins[], int launchButtonCount,
   LiquidCrystal *lcd)
 {
-  _controlStopPin = controlStopPin;
-  _controlPreviousPin = controlPreviousPin;
-  _controlNextPin = controlNextPin;
-  _launchButtonCount = launchButtonCount;
-  _lcd = lcd;
+  if(!initialized) {
 
-  int *_launchPins = new int[launchButtonCount];
-  for(int i = 0; i < launchButtonCount; i++) {
-    _launchPins[i] = launchPins[i];
-    Bounce b = Bounce();
-    this->setupButton(&b, launchPins[i]);
-    _launchButtons[i] = b;
+    _controlStopPin = controlStopPin;
+    _controlPreviousPin = controlPreviousPin;
+    _controlNextPin = controlNextPin;
+    _launchButtonCount = launchButtonCount;
+    _lcd = lcd;
+
+    _lcd->begin(16,2);
+
+    _launchButtons = new Bounce[launchButtonCount];
+    int *_launchPins = new int[launchButtonCount];
+    for(int i = 0; i < launchButtonCount; i++) {
+      int p = launchPins[i];
+      _launchPins[i] = p;
+      Bounce b = Bounce();
+      pinMode(p, INPUT_PULLUP);
+      b.attach(p);
+      b.interval(DebounceInterval);
+      _launchButtons[i] = b;
+    }
+
+    _stopButton = Bounce();
+    _stopButton.attach(controlStopPin, INPUT_PULLUP);
+    _stopButton.interval(DebounceInterval);
+
+    _previousButton = Bounce();
+    _previousButton.attach(controlPreviousPin, INPUT_PULLUP);
+    _previousButton.interval(DebounceInterval);
+
+    _nextButton = Bounce();
+    _nextButton.attach(controlNextPin, INPUT_PULLUP);
+    _nextButton.interval(DebounceInterval);
+
+    this->updateDisplay(true);
+
+    initialized = true;
+
   }
-
-  this->_stopButton = Bounce();
-  this->setupButton(&_stopButton, controlStopPin);
-
-  this->_previousButton = Bounce();
-  this->setupButton(&_previousButton, controlPreviousPin);
-
-  this->_nextButton = Bounce();
-  this->setupButton(&_nextButton, controlNextPin);
 };
 
 void LoopLauncher::update() {
+  if(initialized) {
+    for(int i = 0; i < _launchButtonCount; i++) {
+      Bounce *b = &_launchButtons[i];
+      if(b->update()) {
+        this->handleLaunchButton(b, i);
+      }
+    }
 
-  this->updateButtons();
+    if(_stopButton.update()) {
+      handleStopButton();
+    }
 
-  this->handleLaunchButtons();
+    if(_previousButton.update()) {
+      handlePreviousButton();
+    }
 
-  this->handleStopButton();
-  this->handlePreviousButton();
-  this->handleNextButton();
+    if(_nextButton.update()) {
+      handleNextButton();
+    }
 
-  this->updateDisplay();
-}
-
-void LoopLauncher::updateButtons()
-{
-  for(int i = 0; i < _launchButtonCount; i++) {
-    _launchButtons[i].update();
+    this->updateDisplay(false);
   }
-
-  _stopButton.update();
-  _previousButton.update();
-  _nextButton.update();
 }
-
 
 // handles shuffling the currentBank forward or backward
 void LoopLauncher::shiftCurrentBank(bool forward) {
   const int maxBanks = 20;
-
   if(forward) {
     if(_currentBank == maxBanks-1) // 0 indexed bank numbers
       _currentBank = 0;
-     else
+    else
       _currentBank += 1;
   }
   else {
     if(_currentBank == 0)
       _currentBank = maxBanks-1;
-     else
+    else
       _currentBank -= 1;
   }
 }
 
-void LoopLauncher::shiftCurrentOctave(bool forward) {
-   const int maxOctave = 10;
-
-   if(forward) {
-    if(_currentOctave == maxOctave) // 0 indexed bank numbers
-      _currentOctave = 0;
-     else
-      _currentOctave += 1;
+// return the note to be played according to currentBank and passed trigger
+int LoopLauncher::findLaunchNoteByIndex(int index) {
+  if(index == 127) {
+    return 127;
   }
   else {
-    if(_currentOctave == 0)
-      _currentOctave = maxOctave;
-     else
-      _currentOctave -= 1;
+    return (_currentBank * _launchButtonCount) + index + LaunchButtonStartingNote;
   }
-}
-
-
-int LoopLauncher::findLaunchNoteByIndex(int index) {
-  return (_currentBank * _launchButtonCount) + index + LaunchButtonStartingNote;
 }
 
 char LoopLauncher::findTriggerLabelByIndex(int index) {
@@ -125,18 +131,11 @@ void LoopLauncher::midiOff(int note) {
   usbMIDI.sendNoteOff(note, _midiVelocity, _midiChannel);
 }
 
-void LoopLauncher::handleLaunchButtons(){
-  for(int i = 0; i < _launchButtonCount; i++) {
-      this->handleLaunchButton(&_launchButtons[i], i);
-    }
-}
-
 void LoopLauncher::handleLaunchButton(Bounce *b, int index){
   if(b->fell()) {
     this->midiOn(this->findLaunchNoteByIndex(index));
     _currentTrigger = index;
   }
-
   if(b->rose()) {
     this->midiOff(this->findLaunchNoteByIndex(index));
   }
@@ -144,37 +143,81 @@ void LoopLauncher::handleLaunchButton(Bounce *b, int index){
 
 void LoopLauncher::handleStopButton() {
   if(_stopButton.fell()) {
+    _currentTrigger =127;
     this->midiOn(StopButtonNote);
   }
-
   if(_stopButton.rose()) {
+    _currentTrigger =127;
     this->midiOff(StopButtonNote);
   }
 }
 
 void LoopLauncher::handlePreviousButton() {
   if(_previousButton.fell()) {
+    this->clearTrigger();
     this->shiftCurrentBank(false);
   }
-
   if(_previousButton.rose()) {
   }
 }
 
 void LoopLauncher::handleNextButton() {
   if(_nextButton.fell()) {
-   this->shiftCurrentBank(true);
+    this->clearTrigger();
+    this->shiftCurrentBank(true);
   }
-
   if(_nextButton.rose()) {
   }
 }
 
-void LoopLauncher::setupButton(Bounce *b, int pin) {
-  b->attach(pin);
-  b->interval(DebounceInterval);
+void LoopLauncher::clearTrigger() {
+  _currentTrigger = -1;
+}
+bool LoopLauncher::isTriggerActive() {
+  return _currentTrigger != -1;
 }
 
-void LoopLauncher::updateDisplay() {
-  _lcd->print(_currentBank + this->findTriggerLabelByIndex(_currentTrigger));
+void LoopLauncher::updateDisplay(bool force) {
+  if(force || _currentTrigger != _previousTrigger
+    || _currentBank != _previousBank) {
+
+      char buffer[16];
+      if(this->isTriggerActive()) {
+        sprintf(buffer, "Bank:%02d Patch:%c", _currentBank+1, this->findTriggerLabelByIndex(_currentTrigger));
+      }
+      else {
+        sprintf(buffer, "Bank:%02d Patch:NA", _currentBank+1);
+      }
+      _lcd->clear();
+      _lcd->print(buffer);
+
+      _lcd->setCursor(0,1);
+      _lcd->print("Note:");
+      if(this->isTriggerActive()) {
+        _lcd->print(this->findLaunchNoteByIndex(_currentTrigger));
+      }
+      else {
+        _lcd->print("NA");
+      }
+
+      _previousTrigger = _currentTrigger;
+      _previousBank = _currentBank;
+  }
 }
+
+// void LoopLauncher::shiftCurrentOctave(bool forward) {
+//    const int maxOctave = 10;
+//
+//    if(forward) {
+//     if(_currentOctave == maxOctave) // 0 indexed bank numbers
+//       _currentOctave = 0;
+//     else
+//       _currentOctave += 1;
+//   }
+//   else {
+//     if(_currentOctave == 0)
+//       _currentOctave = maxOctave;
+//     else
+//       _currentOctave -= 1;
+//   }
+// }

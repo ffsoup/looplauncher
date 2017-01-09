@@ -10,10 +10,12 @@ enum LaunchMode { LaunchMode_Note, LaunchMode_PC, LaunchMode_Pad };
 class LoopLauncher
 {
 public:
-  LoopLauncher(int controlStopPin, int controlPreviousPin, int controlNextPin, int launchPins[], int launchButtonCount, LiquidCrystal *lcd);
+  LoopLauncher();
+  void begin(int controlStopPin, int controlPreviousPin, int controlNextPin, int launchPins[], int launchButtonCount, LiquidCrystal *lcd);
   void update();
 
 private:
+  bool initialized = false;
   int _controlStopPin;
   int _controlPreviousPin;
   int _controlNextPin;
@@ -21,7 +23,7 @@ private:
   int _launchPins[];
   LiquidCrystal *_lcd;
 
-  Bounce _launchButtons[];
+  Bounce *_launchButtons;
   Bounce _stopButton;
   Bounce _previousButton;
   Bounce _nextButton;
@@ -29,26 +31,31 @@ private:
   int _midiChannel = 0;
   int _midiVelocity = 100;
 
-  int _currentOctave = 5;
-  int _currentBank = 1;
-  int _currentTrigger = 0;
+  int _currentTrigger = -1;
+  int _previousTrigger = -1;
 
   const int DebounceInterval = 5;
   const int LaunchButtonStartingNote = 1;
   const int StopButtonNote = 127;
 
-  void updateButtons();
 
-  void updateDisplay();
+  void updateDisplay(bool force);
 
-  void handleLaunchButtons();
   void handleLaunchButton(Bounce *b, int pin);
   void handleStopButton();
   void handlePreviousButton();
   void handleNextButton();
 
+  void clearTrigger();
+  bool isTriggerActive();
+
+  int _currentBank = 0;
+  int _previousBank = 0;
   void shiftCurrentBank(bool forward);
-  void shiftCurrentOctave(bool forward);
+
+  // int _currentOctave = 5;
+  // int _previousOctave = 5;
+  // void shiftCurrentOctave(bool forward);
 
   int findLaunchNoteByIndex(int index);
   char findTriggerLabelByIndex(int index);
@@ -56,7 +63,6 @@ private:
   void midiOn(int note);
   void midiOff(int note);
 
-  void setupButton(Bounce *b, int pin);
 };
 
 #endif
