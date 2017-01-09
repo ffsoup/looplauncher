@@ -29,7 +29,7 @@ The trigger and control buttons are wired to pins 1-9 and the second lugs are al
 Lcd to Teensy
 - Lcd 1 to GND
 - Lcd 2 to Vin (+5V instead of the 3.3V pin)
-- Lcd 3 to 22
+- Lcd 3 to 22 (we'll send a PWM to control contrast)
 - Lcd 4 to 19
 - Lcd 5 to GND
 - Lcd 6 to 18
@@ -37,3 +37,36 @@ Lcd to Teensy
 - Lcd 11, 12, 13, 14 to 17, 16, 15, 14
 - Lcd 15 to Vin (+5V no the 3.3V pin)
 - Lcd 16 to Gnd
+
+Buttons to Teensy
+- Trigger buttons and control buttons wired to 0-9
+
+## Code
+The LoopLauncher lib and an example that presumes you wired things up like I did is in the LoopLauncher subdirectory.  The pedal functions similar to the Looptimus pedal.  The 6 trigger buttons send note on/off when pressed according to the bank that you are in.  By default, when the pedal is powered, the first bank is selected (displayed as 1, but indexed at 0 in the code).  Hack away.
+
+```c++
+#include <LoopLauncher.h>
+
+LoopLauncher launcher = LoopLauncher();
+LiquidCrystal lcd(19, 18, 17, 16, 15, 14);
+
+void setup() {
+  int launchPins[6] = {2, 1, 0, 8, 7, 6};
+  launcher.begin(5, 4, 3, launchPins, 6, &lcd);
+}
+
+void loop() {
+  launcher.update();
+}
+```
+
+That's all there is to running it.  This version presumes an lcd is used to display.  A 7-segment display could also be used, but you'd have to adjust the code as well.  I'll likely make the next one w a 4-digit 7-segment display to simplify config.  MidiChannel can be controlled in the code ... I suppose that should be made configurable from the pedal as well.
+
+*Caveats*
+I'm not really settled with the implementation.  I'm sure it's sloppy all over.  Feel free to suggest/make contribute changes.
+
+### What's Next?
+- Adding a means to send static notes regardless of selected bank or mode (perhaps long pressing to get to an alternate mode an then sending set notes for each button).
+- Adding a root/5th mode to allow playing of pads rather than triggering.  The alternate mode will behave differently in that a triggered note will not send on off when the button is released.  Rather another button or 'stop' will have to be pressed to end the previous note.
+-  Adding a means to change modes (Normal vs Pad)
+ 
