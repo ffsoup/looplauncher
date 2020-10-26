@@ -5,10 +5,10 @@ LoopLauncher is an experiment in midi control using a Teensy and stomp buttons t
 ## Parts list
 Parts Total $62
 - 1 [Teensy 3.2 ($20)](https://www.pjrc.com/store/teensy32.html)
-- 9 [SPST Soft Touch Momentary Footswitch ($18)](http://www.bitcheslovemyswitches.com/#!/SPST-Soft-Touch-Momentary-Footswitch-Normally-Open/p/10220659/category=5027572)
+- 9 [SPST Soft Touch Momentary Footswitch ($18)](https://lovemyswitches.com/spst-momentary-foot-switch-normally-open-soft-touch-short-shaft-pre-wired/)
 - 1 [16x2 LCD ($10)](https://www.adafruit.com/product/181)
 - 1 [Panel Mount USB Cable - B Female to Micro-B Male ($4)](https://www.adafruit.com/products/937)
-- 1 [1590DD Enclosure ($10)](http://www.bitcheslovemyswitches.com/#!/1590DD/p/20370169/category=5027533)
+- 1 [1590DD Enclosure ($10)](http://lovemyswitches.com/#!/1590DD/p/20370169/category=5027533)
 - Miscellaneous hookup wire
 
 
